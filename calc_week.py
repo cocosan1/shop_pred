@@ -277,10 +277,10 @@ st.write(df_std) #確認
 
 # 相互相関コレログラム（原系列）
 fig0, ax = plt.subplots()
-xcor_value = plt.xcorr(df_std['成約件数'], 
-                       df_std['組数'],
+xcor_value = plt.xcorr(df_std['組数'], 
+                       df_std['成約件数'],
                        detrend=mlab.detrend_none, 
-                       maxlags=30)
+                       maxlags=60)
 st.pyplot(fig0)
 
 # 相互相関の値
@@ -302,8 +302,8 @@ st.write(df_stdw) #確認
 
 # 相互相関コレログラム（原系列）
 fig1, ax = plt.subplots()
-xcor_value = ax.xcorr(df_stdw['成約件数'], 
-                       df_stdw['組数'],
+xcor_value = ax.xcorr(df_std['組数'], 
+                       df_std['成約件数'],
                        detrend=mlab.detrend_none, 
                        maxlags=12)
 st.pyplot(fig1)
