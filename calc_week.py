@@ -31,8 +31,8 @@ import warnings
 
 from scipy import stats
 
-st.set_page_config(page_title='shop_all')
-st.markdown('#### shop 来場者分析')
+st.set_page_config(page_title='shop_analysis')
+st.markdown('#### shop分析')
 
 #current working dir
 cwd = os.path.dirname(__file__)
@@ -273,7 +273,9 @@ df_all2 = df_all2.reindex(new_index).fillna(0)
 st.markdown('### 日')
 # 標準化（平均0、分散1）
 df_std = stats.zscore(df_all2)
-st.write(df_std) #確認
+
+with st.expander('日にち/標準化済', expanded=False):
+    st.write(df_std) #確認
 
 # 相互相関コレログラム（原系列）
 fig0, ax = plt.subplots()
@@ -287,18 +289,34 @@ st.pyplot(fig0)
 xcor_pd = pd.DataFrame(xcor_value[1],xcor_value[0])
 xcor_pd.index.name = 'lag'
 xcor_pd.columns = ['xcor']
-st.write(xcor_pd) #確認
+
+#相互相関のソート
+xcor2 = xcor_pd[xcor_pd.index >= 1]
+xcor2 = xcor2.sort_values('xcor', ascending=False)
+
+#max値の抽出
+df_max = xcor2[xcor2['xcor'] == xcor2['xcor'].max()]
+max_lag = list(df_max.index.values)[0]
+max_cor = df_max.iat[0, 0]
+
+st.metric(label='何日後に成約する傾向が高いか', value=f'{max_lag}日')
+st.caption(f'相関係数: {max_cor}')
+
+with st.expander('非単位/相関係数', expanded=False):
+    st.write('一覧')
+    st.write(xcor_pd) #確認
+    st.write('一覧/ソート')
+    st.write(xcor2) #確認
 
 
 #***************************************************************************week
 st.markdown('### 週')
 df_all2w = df_all2.resample('W').sum()
 
-st.write(df_all2w)
-
 # 標準化（平均0、分散1）
 df_stdw = stats.zscore(df_all2w)
-st.write(df_stdw) #確認
+with st.expander('週単位/標準化済', expanded=False):
+    st.write(df_stdw) #確認
 
 # 相互相関コレログラム（原系列）
 fig1, ax = plt.subplots()
@@ -312,28 +330,51 @@ st.pyplot(fig1)
 xcor_pd = pd.DataFrame(xcor_value[1],xcor_value[0])
 xcor_pd.index.name = 'lag'
 xcor_pd.columns = ['xcor']
-st.write(xcor_pd) #確認
+with st.expander('週単位/相関係数', expanded=False):
+    st.write(xcor_pd) #確認
 
-st.write('売上合計')
+#相関係数の最大値の検出
+xcor2 = xcor_pd[xcor_pd.index >= 1]
+df_max = xcor2[xcor2['xcor'] == xcor2['xcor'].max()]
+max_lag = list(df_max.index.values)[0]
+
+max_cor = df_max.iat[0, 0]
+
+
+st.metric(label='何週後に成約する傾向が高いか', value=f'{max_lag}週')
+st.caption(f'相関係数: {max_cor}')
+
+#****************その他
+#st.write('売上合計')
 sales_sum = df_all2['売上'].sum()
-st.write(sales_sum)
-st.write('組数合計')
+#st.write('組数合計')
 kumi_sum = df_all2['組数'].sum()
-st.write(kumi_sum)
-st.write('成約件数合計')
+#st.write('成約件数合計')
 seiyaku_sum = df_all2['成約件数'].sum()
-st.write(seiyaku_sum)
-st.write('成約単価')
-st.write(sales_sum / seiyaku_sum)
-st.write('成約率')
-st.write(seiyaku_sum / kumi_sum)
-st.write('来店1組当たりの売上')
-st.write(sales_sum / kumi_sum)
-st.write('成約に必要な組数')
-st.write(1 / (seiyaku_sum / kumi_sum))
+#st.write('成約単価')
+seiyaku_tanka = sales_sum / seiyaku_sum
+#st.write('成約率')
+seiyaku_rate = seiyaku_sum / kumi_sum
+#st.write('来店1組当たりの売上')
+sales_per_kumi = sales_sum / kumi_sum
+#st.write('成約に必要な組数')
+seiyaku_needed = 1 / (seiyaku_sum / kumi_sum)
+
+val_dict = {
+    '売上合計': sales_sum,
+    '組数合計': kumi_sum,
+    '成約件数合計': seiyaku_sum,
+    '成約単価': seiyaku_tanka,
+    '成約率': seiyaku_rate,
+    '来店1組当たりの売上': sales_per_kumi,
+    '成約に必要な組数': seiyaku_needed
+}
+
+df_val = pd.DataFrame(val_dict, index=['数値']).T
+st.table(df_val)
 
 
-
+#重要指標の月別推移の表示検討
 
 
 
