@@ -463,7 +463,7 @@ st.write('パフォーマンス一覧/累計')
 st.table(df_now.iloc[3:])
 
 #*******************パフォーマンス比較
-st.write('パフォーマンス比較')
+st.write('パフォーマンス比較/累計')
 df_month2 = df_month.sort_index(ascending=False)
 month_list = list(df_month2.index)
 end_month = st.selectbox('いつまでの期間と比較するか', month_list, key='ml')
