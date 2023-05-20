@@ -269,17 +269,17 @@ new_index = pd.date_range(start=df_all2.index.min(), end=df_all2.index.max(), fr
 # 元のDataFrameを新しいindexで再インデックス
 df_all2 = df_all2.reindex(new_index).fillna(0)
 
-#********************累計列の準備
-df_all2['cum組数'] = df_all2['組数'].cumsum()
-df_all2['cum売上'] = df_all2['売上'].cumsum()
-df_all2['cum成約件数'] = df_all2['成約件数'].cumsum()
-
 with st.expander('df_all2', expanded=False):
     st.write(df_all2)
 
 #***************************月集計
 st.markdown('### 月')
 df_month = df_all2.resample('M').sum()
+
+#********************累計列の準備
+df_month['cum組数'] = df_month['組数'].cumsum()
+df_month['cum売上'] = df_month['売上'].cumsum()
+df_month['cum成約件数'] = df_month['成約件数'].cumsum()
 
 df_month['売上/組数'] = df_month['売上'] / df_month['組数']
 df_month['売上/成約件数'] = df_month['売上'] / df_month['成約件数']
@@ -288,25 +288,30 @@ df_month['成約件数/組数'] = df_month['成約件数'] / df_month['組数']
 with st.expander('df_week', expanded=False):
     st.write(df_month)
 
-st.write('来店客数/月')
+st.write('来店客数/月単位')
 graph.make_line([df_month['組数']], ['組数'], df_month.index)
 
-st.write('売上/月')
+st.write('売上/月単位')
 graph.make_line([df_month['売上']], ['売上'], df_month.index)
 
-st.write('売上/組数')
+st.write('売上/組数: 月単位')
 graph.make_line([df_month['売上/組数']],['売上/組数'], df_month.index ) 
 
-st.write('売上/成約件数')
+st.write('売上/成約件数: 月単位')
 graph.make_line([df_month['売上/成約件数']],['売上/成約件数'], df_month.index ) 
 
-st.write('成約件数/組数')
+st.write('成約件数/組数: 月単位')
 graph.make_line([df_month['成約件数/組数']],['成約件数/組数'], df_month.index )
 
 #***************************************************************************day
 st.markdown('### 日')
 
 df_day = df_all2.copy()
+
+#********************累計列の準備
+df_day['cum組数'] = df_day['組数'].cumsum()
+df_day['cum売上'] = df_day['売上'].cumsum()
+df_day['cum成約件数'] = df_day['成約件数'].cumsum()
 
 df_day['cum売上/組数'] = df_day['cum売上'] / df_day['cum組数']
 df_day['cum売上/成約件数'] = df_day['cum売上'] / df_day['cum成約件数']
@@ -316,13 +321,13 @@ with st.expander('df_day', expanded=False):
     st.write(df_day)
 
 #**********************************可視化
-st.write('cum売上/組数')
+st.write('cum売上/組数: 累計')
 graph.make_line([df_day['cum売上/組数']],['cum売上/組数'], df_day.index ) 
 
-st.write('cum売上/成約件数')
+st.write('cum売上/成約件数: 累計')
 graph.make_line([df_day['cum売上/成約件数']],['cum売上/成約件数'], df_day.index ) 
 
-st.write('cum成約件数/組数')
+st.write('cum成約件数/組数: 累計')
 graph.make_line([df_day['cum成約件数/組数']],['cum成約件数/組数'], df_day.index )
 
 
@@ -372,6 +377,11 @@ st.markdown('### 週')
 df_week = df_all2.copy()
 df_week = df_week.resample('W').sum()
 
+#********************累計列の準備
+df_week['cum組数'] = df_week['組数'].cumsum()
+df_week['cum売上'] = df_week['売上'].cumsum()
+df_week['cum成約件数'] = df_week['成約件数'].cumsum()
+
 df_week['cum売上/組数'] = df_week['cum売上'] / df_week['cum組数']
 df_week['cum売上/成約件数'] = df_week['cum売上'] / df_week['cum成約件数']
 df_week['cum成約件数/組数'] = df_week['cum成約件数'] / df_week['cum組数']
@@ -380,13 +390,13 @@ with st.expander('df_week', expanded=False):
     st.write(df_week)
 
 #**********************************可視化
-st.write('cum売上/組数')
+st.write('cum売上/組数: 累計')
 graph.make_line([df_week['cum売上/組数']],['cum売上/組数'], df_week.index ) 
 
-st.write('cum売上/成約件数')
+st.write('cum売上/成約件数: 累計')
 graph.make_line([df_week['cum売上/成約件数']],['cum売上/成約件数'], df_week.index ) 
 
-st.write('cum成約件数/組数')
+st.write('cum成約件数/組数: 累計')
 graph.make_line([df_week['cum成約件数/組数']],['cum成約件数/組数'], df_week.index )
 
 
@@ -438,7 +448,7 @@ sales_per_kumi = sales_sum / kumi_sum
 #st.write('成約に必要な組数')
 seiyaku_needed = 1 / (seiyaku_sum / kumi_sum)
 
-val_dict = {
+now_dict = {
     '売上合計': sales_sum,
     '組数合計': kumi_sum,
     '成約件数合計': seiyaku_sum,
@@ -448,8 +458,52 @@ val_dict = {
     '成約に必要な組数': seiyaku_needed
 }
 
-df_val = pd.DataFrame(val_dict, index=['数値']).T
-st.table(df_val)
+df_now = pd.DataFrame(now_dict, index=['直近']).T
+st.write('パフォーマンス一覧/累計')
+st.table(df_now.iloc[3:])
+
+#*******************パフォーマンス比較
+st.write('パフォーマンス比較')
+df_month2 = df_month.sort_index(ascending=False)
+month_list = list(df_month2.index)
+end_month = st.selectbox('いつまでの期間と比較するか', month_list, key='ml')
+
+df_selected = df_month.loc[: end_month, :]
+
+#st.write('売上合計')
+sales_sum = df_selected['売上'].sum()
+#st.write('組数合計')
+kumi_sum = df_selected['組数'].sum()
+#st.write('成約件数合計')
+seiyaku_sum = df_selected['成約件数'].sum()
+#st.write('成約単価')
+seiyaku_tanka = sales_sum / seiyaku_sum
+#st.write('成約率')
+seiyaku_rate = seiyaku_sum / kumi_sum
+#st.write('来店1組当たりの売上')
+sales_per_kumi = sales_sum / kumi_sum
+#st.write('成約に必要な組数')
+seiyaku_needed = 1 / (seiyaku_sum / kumi_sum)
+
+target_dict = {
+    '売上合計': sales_sum,
+    '組数合計': kumi_sum,
+    '成約件数合計': seiyaku_sum,
+    '成約単価': seiyaku_tanka,
+    '成約率': seiyaku_rate,
+    '来店1組当たりの売上': sales_per_kumi,
+    '成約に必要な組数': seiyaku_needed
+}
+
+df_target = pd.DataFrame(target_dict, index=['比較']).T
+
+df_m = df_now.merge(df_target, left_index=True, right_index=True, how='outer')
+
+df_m['差異'] = df_m['直近'] - df_m['比較']
+
+df_m['比率'] = df_m['直近'] / df_m['比較']
+st.table(df_m.iloc[3:])
+
 
 
 
