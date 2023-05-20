@@ -269,14 +269,71 @@ new_index = pd.date_range(start=df_all2.index.min(), end=df_all2.index.max(), fr
 # 元のDataFrameを新しいindexで再インデックス
 df_all2 = df_all2.reindex(new_index).fillna(0)
 
+#********************累計列の準備
+df_all2['cum組数'] = df_all2['組数'].cumsum()
+df_all2['cum売上'] = df_all2['売上'].cumsum()
+df_all2['cum成約件数'] = df_all2['成約件数'].cumsum()
+
+with st.expander('df_all2', expanded=False):
+    st.write(df_all2)
+
+#***************************月集計
+st.markdown('### 月')
+df_month = df_all2.resample('M').sum()
+
+df_month['売上/組数'] = df_month['売上'] / df_month['組数']
+df_month['売上/成約件数'] = df_month['売上'] / df_month['成約件数']
+df_month['成約件数/組数'] = df_month['成約件数'] / df_month['組数']
+
+with st.expander('df_week', expanded=False):
+    st.write(df_month)
+
+st.write('来店客数/月')
+graph.make_line([df_month['組数']], ['組数'], df_month.index)
+
+st.write('売上/月')
+graph.make_line([df_month['売上']], ['売上'], df_month.index)
+
+st.write('売上/組数')
+graph.make_line([df_month['売上/組数']],['売上/組数'], df_month.index ) 
+
+st.write('売上/成約件数')
+graph.make_line([df_month['売上/成約件数']],['売上/成約件数'], df_month.index ) 
+
+st.write('成約件数/組数')
+graph.make_line([df_month['成約件数/組数']],['成約件数/組数'], df_month.index )
+
 #***************************************************************************day
 st.markdown('### 日')
+
+df_day = df_all2.copy()
+
+df_day['cum売上/組数'] = df_day['cum売上'] / df_day['cum組数']
+df_day['cum売上/成約件数'] = df_day['cum売上'] / df_day['cum成約件数']
+df_day['cum成約件数/組数'] = df_day['cum成約件数'] / df_day['cum組数']
+
+with st.expander('df_day', expanded=False):
+    st.write(df_day)
+
+#**********************************可視化
+st.write('cum売上/組数')
+graph.make_line([df_day['cum売上/組数']],['cum売上/組数'], df_day.index ) 
+
+st.write('cum売上/成約件数')
+graph.make_line([df_day['cum売上/成約件数']],['cum売上/成約件数'], df_day.index ) 
+
+st.write('cum成約件数/組数')
+graph.make_line([df_day['cum成約件数/組数']],['cum成約件数/組数'], df_day.index )
+
+
+
 # 標準化（平均0、分散1）
-df_std = stats.zscore(df_all2)
+df_std = stats.zscore(df_day)
 
 with st.expander('日にち/標準化済', expanded=False):
     st.write(df_std) #確認
 
+st.write('相互相関コレログラム 組数/成約件数')
 # 相互相関コレログラム（原系列）
 fig0, ax = plt.subplots()
 xcor_value = plt.xcorr(df_std['組数'], 
@@ -311,13 +368,34 @@ with st.expander('非単位/相関係数', expanded=False):
 
 #***************************************************************************week
 st.markdown('### 週')
-df_all2w = df_all2.resample('W').sum()
+
+df_week = df_all2.copy()
+df_week = df_week.resample('W').sum()
+
+df_week['cum売上/組数'] = df_week['cum売上'] / df_week['cum組数']
+df_week['cum売上/成約件数'] = df_week['cum売上'] / df_week['cum成約件数']
+df_week['cum成約件数/組数'] = df_week['cum成約件数'] / df_week['cum組数']
+
+with st.expander('df_week', expanded=False):
+    st.write(df_week)
+
+#**********************************可視化
+st.write('cum売上/組数')
+graph.make_line([df_week['cum売上/組数']],['cum売上/組数'], df_week.index ) 
+
+st.write('cum売上/成約件数')
+graph.make_line([df_week['cum売上/成約件数']],['cum売上/成約件数'], df_week.index ) 
+
+st.write('cum成約件数/組数')
+graph.make_line([df_week['cum成約件数/組数']],['cum成約件数/組数'], df_week.index )
+
 
 # 標準化（平均0、分散1）
-df_stdw = stats.zscore(df_all2w)
+df_stdw = stats.zscore(df_week)
 with st.expander('週単位/標準化済', expanded=False):
     st.write(df_stdw) #確認
 
+st.write('相互相関コレログラム 組数/成約件数')
 # 相互相関コレログラム（原系列）
 fig1, ax = plt.subplots()
 xcor_value = ax.xcorr(df_std['組数'], 
@@ -373,8 +451,6 @@ val_dict = {
 df_val = pd.DataFrame(val_dict, index=['数値']).T
 st.table(df_val)
 
-
-#重要指標の月別推移の表示検討
 
 
 
