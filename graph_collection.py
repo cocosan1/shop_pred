@@ -1,6 +1,7 @@
 import streamlit as st
 import os
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots #2軸
 
 #************************************************************棒グラフ
 class Graph():
@@ -96,6 +97,27 @@ class Graph():
             )
             #plotly_chart plotlyを使ってグラグ描画　グラフの幅が列の幅
             st.plotly_chart(fig, use_container_width=True) 
+
+        #***************************************************************line 2軸
+        def make_line_2shaft(self, x_list1, x_list2, y_list1, y_list2, name1, name2):
+            fig_sales = make_subplots(specs=[[{"secondary_y": True}]]) #True にすることで2つ目の軸の表示
+
+            # 第1軸のグラフ
+            fig_sales.add_trace(
+                go.Scatter(x=x_list1, y=y_list1, name=name1),
+                secondary_y=False,
+            )
+
+            # 第2軸のグラフ
+            fig_sales.add_trace(
+                go.Scatter(x=x_list1, y=y_list2, name=name2),
+                secondary_y=True,
+            )
+
+            fig_sales.update_yaxes(title_text=f"<b>primary</b> {name1}", secondary_y=False)
+            fig_sales.update_yaxes(title_text=f"<b>secondary</b> {name2}", secondary_y=True)
+
+            st.plotly_chart(fig_sales, use_container_width=True)     
         #***************************************************************円
         def make_pie(self, vals, labels):
 

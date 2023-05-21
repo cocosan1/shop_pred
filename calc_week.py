@@ -272,7 +272,7 @@ df_all2 = df_all2.reindex(new_index).fillna(0)
 with st.expander('df_all2', expanded=False):
     st.write(df_all2)
 
-#***************************月集計
+#*****************************************************************************月集計
 st.markdown('### 月')
 df_month = df_all2.resample('M').sum()
 
@@ -303,6 +303,90 @@ graph.make_line([df_month['売上/成約件数']],['売上/成約件数'], df_mo
 st.write('成約件数/組数: 月単位')
 graph.make_line([df_month['成約件数/組数']],['成約件数/組数'], df_month.index )
 
+# 標準化（平均0、分散1）
+df_std = stats.zscore(df_month)
+
+with st.expander('月/標準化済', expanded=False):
+    st.write(df_std) #確認
+
+st.write('相互相関コレログラム 組数/成約件数')
+# 相互相関コレログラム（原系列）
+fig0, ax = plt.subplots()
+xcor_value1 = plt.xcorr(df_std['組数'], 
+                       df_std['成約件数'],
+                       detrend=mlab.detrend_none, 
+                       maxlags=6)
+st.pyplot(fig0)
+
+st.write('相互相関コレログラム 組数/売上')
+# 相互相関コレログラム（原系列）
+fig0, ax = plt.subplots()
+xcor_value2 = plt.xcorr(df_std['組数'], 
+                       df_std['売上'],
+                       detrend=mlab.detrend_none, 
+                       maxlags=6)
+st.pyplot(fig0)
+
+# 相互相関の値/売上
+xcor_pd = pd.DataFrame(xcor_value2[1],xcor_value2[0])
+xcor_pd.index.name = 'lag'
+xcor_pd.columns = ['xcor']
+
+#相互相関のソート
+xcor2 = xcor_pd[xcor_pd.index >= 1]
+xcor2 = xcor2.sort_values('xcor', ascending=False)
+
+#max値の抽出
+df_max = xcor2[xcor2['xcor'] == xcor2['xcor'].max()]
+max_lag = list(df_max.index.values)[0]
+max_cor = df_max.iat[0, 0]
+
+st.metric(label='何か月後に売上が計上される傾向が高いか', value=f'{max_lag}か月')
+st.caption(f'相関係数: {max_cor}')
+
+#*****************************************************************************月集計　移動平均
+st.markdown('### 月/移動平均')
+df_month = df_all2.resample('M').sum()
+#********************移動平均列の準備window２
+df_month['組数2'] = df_month['組数'].rolling(2, min_periods=2).mean()
+df_month['売上2'] = df_month['売上'].rolling(2, min_periods=2).mean()
+df_month['成約件数2'] = df_month['成約件数'].rolling(2, min_periods=2).mean()
+
+#********************累計列の準備
+df_month['cum組数'] = df_month['組数2'].cumsum()
+df_month['cum売上'] = df_month['売上2'].cumsum()
+df_month['cum成約件数'] = df_month['成約件数2'].cumsum()
+
+df_month['売上/組数'] = df_month['売上2'] / df_month['組数2']
+df_month['売上/成約件数'] = df_month['売上2'] / df_month['成約件数2']
+df_month['成約件数/組数'] = df_month['成約件数2'] / df_month['組数2']
+
+with st.expander('df_month', expanded=False):
+    st.write(df_month)
+
+with st.expander('月移動平均グラフ', expanded=False):
+
+    st.write('来店客数/月単位')
+    graph.make_line([df_month['組数2']], ['組数'], df_month.index)
+
+    st.write('売上/月単位')
+    graph.make_line([df_month['売上2']], ['売上'], df_month.index)
+
+    st.write('売上/組数: 月単位')
+    graph.make_line([df_month['売上/組数']],['売上/組数'], df_month.index ) 
+
+    st.write('売上/成約件数: 月単位')
+    graph.make_line([df_month['売上/成約件数']],['売上/成約件数'], df_month.index ) 
+
+    st.write('成約件数/組数: 月単位')
+    graph.make_line([df_month['成約件数/組数']],['成約件数/組数'], df_month.index )
+
+st.write('売上(-1か月ずらし)/組数: 月単位 2軸')
+#売上1か月ずらし
+df_month['売上3'] = df_month['売上2'].shift(freq='-1M')
+graph.make_line_2shaft(df_month.index, df_month.index, df_month['組数2'], df_month['売上3'], '組数', '売上')
+
+
 #***************************************************************************day
 st.markdown('### 日')
 
@@ -320,17 +404,16 @@ df_day['cum成約件数/組数'] = df_day['cum成約件数'] / df_day['cum組数
 with st.expander('df_day', expanded=False):
     st.write(df_day)
 
+with st.expander('日/グラフ', expanded=False):
 #**********************************可視化
-st.write('cum売上/組数: 累計')
-graph.make_line([df_day['cum売上/組数']],['cum売上/組数'], df_day.index ) 
+    st.write('cum売上/組数: 累計')
+    graph.make_line([df_day['cum売上/組数']],['cum売上/組数'], df_day.index ) 
 
-st.write('cum売上/成約件数: 累計')
-graph.make_line([df_day['cum売上/成約件数']],['cum売上/成約件数'], df_day.index ) 
+    st.write('cum売上/成約件数: 累計')
+    graph.make_line([df_day['cum売上/成約件数']],['cum売上/成約件数'], df_day.index ) 
 
-st.write('cum成約件数/組数: 累計')
-graph.make_line([df_day['cum成約件数/組数']],['cum成約件数/組数'], df_day.index )
-
-
+    st.write('cum成約件数/組数: 累計')
+    graph.make_line([df_day['cum成約件数/組数']],['cum成約件数/組数'], df_day.index )
 
 # 標準化（平均0、分散1）
 df_std = stats.zscore(df_day)
@@ -389,15 +472,16 @@ df_week['cum成約件数/組数'] = df_week['cum成約件数'] / df_week['cum組
 with st.expander('df_week', expanded=False):
     st.write(df_week)
 
-#**********************************可視化
-st.write('cum売上/組数: 累計')
-graph.make_line([df_week['cum売上/組数']],['cum売上/組数'], df_week.index ) 
+with st.expander('週/グラフ', expanded=False):
+    #**********************************可視化
+    st.write('cum売上/組数: 累計')
+    graph.make_line([df_week['cum売上/組数']],['cum売上/組数'], df_week.index ) 
 
-st.write('cum売上/成約件数: 累計')
-graph.make_line([df_week['cum売上/成約件数']],['cum売上/成約件数'], df_week.index ) 
+    st.write('cum売上/成約件数: 累計')
+    graph.make_line([df_week['cum売上/成約件数']],['cum売上/成約件数'], df_week.index ) 
 
-st.write('cum成約件数/組数: 累計')
-graph.make_line([df_week['cum成約件数/組数']],['cum成約件数/組数'], df_week.index )
+    st.write('cum成約件数/組数: 累計')
+    graph.make_line([df_week['cum成約件数/組数']],['cum成約件数/組数'], df_week.index )
 
 
 # 標準化（平均0、分散1）
