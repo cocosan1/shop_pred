@@ -652,6 +652,14 @@ df_merge['比率'] = df_merge['予測売上'] / df_merge['売上']
 st.subheader('売上予測モデル性能テスト')
 st.write('テスト結果')
 st.write(df_merge)
+st.write(f'test_score: {model.score(X_test,y_test)}')
+
+# 散布図
+plt.scatter(X_test, y_test)
+ 
+# 回帰直線
+plt.plot(X_test, model.predict(X_test))
+st.pyplot(plt)
 
 #予測
 st.subheader('売上の予測')
