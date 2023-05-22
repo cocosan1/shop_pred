@@ -32,7 +32,7 @@ import warnings
 from scipy import stats
 
 st.set_page_config(page_title='shop_analysis')
-st.markdown('#### shop分析')
+st.markdown('## shop分析')
 
 #current working dir
 cwd = os.path.dirname(__file__)
@@ -47,7 +47,8 @@ def get_data(shop_key, SP_SHEET):
     #第一引数　秘密鍵のpath　第二引数　どこのAPIにアクセスするか
     #st.secrets[]内は''で囲むこと
     #scpes 今回実際に使うGoogleサービスの範囲を指定
-    credentials = service_account.Credentials.from_service_account_info(st.secrets['gcp_service_account_kurax'], scopes=[ "https://www.googleapis.com/auth/spreadsheets", ])
+    credentials = service_account.Credentials.from_service_account_info(st.secrets['gcp_service_account_kurax'], \
+                                                                        scopes=[ "https://www.googleapis.com/auth/spreadsheets", ])
 
     #OAuth2のクレデンシャル（認証情報）を使用してGoogleAPIにログイン
     gc = gspread.authorize(credentials)
@@ -430,6 +431,7 @@ xcor_value = plt.xcorr(df_std['組数'],
                        maxlags=60)
 st.pyplot(fig0)
 
+
 # 相互相関の値
 xcor_pd = pd.DataFrame(xcor_value[1],xcor_value[0])
 xcor_pd.index.name = 'lag'
@@ -498,6 +500,15 @@ xcor_value = ax.xcorr(df_std['組数'],
                        maxlags=12)
 st.pyplot(fig1)
 
+st.write('相互相関コレログラム 組数/売上')
+# 相互相関コレログラム（原系列）
+fig1, ax = plt.subplots()
+xcor_value = ax.xcorr(df_std['組数'], 
+                       df_std['売上'],
+                       detrend=mlab.detrend_none, 
+                       maxlags=12)
+st.pyplot(fig1)
+
 # 相互相関の値
 xcor_pd = pd.DataFrame(xcor_value[1],xcor_value[0])
 xcor_pd.index.name = 'lag'
@@ -516,77 +527,96 @@ max_cor = df_max.iat[0, 0]
 st.metric(label='何週後に成約する傾向が高いか', value=f'{max_lag}週')
 st.caption(f'相関係数: {max_cor}')
 
-#****************その他
-#st.write('売上合計')
-sales_sum = df_all2['売上'].sum()
-#st.write('組数合計')
-kumi_sum = df_all2['組数'].sum()
-#st.write('成約件数合計')
-seiyaku_sum = df_all2['成約件数'].sum()
-#st.write('成約単価')
-seiyaku_tanka = sales_sum / seiyaku_sum
+#******************************************************************移動平均
+df_week2 = df_all2.copy()
+df_week2 = df_week.resample('W').sum()
+#********************移動平均列の準備window２
+df_week2['組数2'] = df_week2['組数'].rolling(7, min_periods=7).mean()
+df_week2['売上2'] = df_week2['売上'].rolling(7, min_periods=7).mean()
+df_week2['成約件数2'] = df_week2['成約件数'].rolling(7, min_periods=7).mean()
+
+#********************累計列の準備
+# df_month['cum組数'] = df_month['組数2'].cumsum()
+# df_month['cum売上'] = df_month['売上2'].cumsum()
+# df_month['cum成約件数'] = df_month['成約件数2'].cumsum()
+
+df_week2['売上/組数'] = df_week2['売上2'] / df_week2['組数2']
+df_week2['売上/成約件数'] = df_week2['売上2'] / df_week2['成約件数2']
+df_week2['成約件数/組数'] = df_week2['成約件数2'] / df_week2['組数2']
+
+df_week3 = df_week2.sort_index(ascending=False)
+month_list = list(df_week3.index)
+target_week = st.selectbox('週を選択', month_list, key='tw')
+
+df_selected = df_week3.loc[target_week]
+
+# #st.write('売上合計')
+# sales_sum = df_selected['売上'].sum()
+# #st.write('組数合計')
+# kumi_sum = df_selected['組数'].sum()
+# #st.write('成約件数合計')
+# seiyaku_sum = df_selected['成約件数'].sum()
+st.write('成約単価')
+seiyaku_tanka = df_selected['売上'] / df_selected['成約件数']
 #st.write('成約率')
-seiyaku_rate = seiyaku_sum / kumi_sum
+seiyaku_rate = df_selected['成約件数'] / df_selected['組数']
 #st.write('来店1組当たりの売上')
-sales_per_kumi = sales_sum / kumi_sum
+sales_per_kumi = df_selected['売上'] / df_selected['組数']
 #st.write('成約に必要な組数')
-seiyaku_needed = 1 / (seiyaku_sum / kumi_sum)
-
-now_dict = {
-    '売上合計': sales_sum,
-    '組数合計': kumi_sum,
-    '成約件数合計': seiyaku_sum,
-    '成約単価': seiyaku_tanka,
-    '成約率': seiyaku_rate,
-    '来店1組当たりの売上': sales_per_kumi,
-    '成約に必要な組数': seiyaku_needed
-}
-
-df_now = pd.DataFrame(now_dict, index=['直近']).T
-st.write('パフォーマンス一覧/累計')
-st.table(df_now.iloc[3:])
-
-#*******************パフォーマンス比較
-st.write('パフォーマンス比較/累計')
-df_month2 = df_month.sort_index(ascending=False)
-month_list = list(df_month2.index)
-end_month = st.selectbox('いつまでの期間と比較するか', month_list, key='ml')
-
-df_selected = df_month.loc[: end_month, :]
-
-#st.write('売上合計')
-sales_sum = df_selected['売上'].sum()
-#st.write('組数合計')
-kumi_sum = df_selected['組数'].sum()
-#st.write('成約件数合計')
-seiyaku_sum = df_selected['成約件数'].sum()
-#st.write('成約単価')
-seiyaku_tanka = sales_sum / seiyaku_sum
-#st.write('成約率')
-seiyaku_rate = seiyaku_sum / kumi_sum
-#st.write('来店1組当たりの売上')
-sales_per_kumi = sales_sum / kumi_sum
-#st.write('成約に必要な組数')
-seiyaku_needed = 1 / (seiyaku_sum / kumi_sum)
+seiyaku_needed = 1 / (df_selected['成約件数'] / df_selected['組数'])
 
 target_dict = {
-    '売上合計': sales_sum,
-    '組数合計': kumi_sum,
-    '成約件数合計': seiyaku_sum,
+
     '成約単価': seiyaku_tanka,
     '成約率': seiyaku_rate,
     '来店1組当たりの売上': sales_per_kumi,
     '成約に必要な組数': seiyaku_needed
 }
 
-df_target = pd.DataFrame(target_dict, index=['比較']).T
+df_target = pd.DataFrame(target_dict, index=['週/移動平均']).T
 
-df_m = df_now.merge(df_target, left_index=True, right_index=True, how='outer')
+with st.expander('月移動平均グラフ', expanded=False):
 
-df_m['差異'] = df_m['直近'] - df_m['比較']
+    st.write('売上/組数: 週単位')
+    graph.make_line([df_week2['売上/組数']],['売上/組数'], df_week2.index ) 
 
-df_m['比率'] = df_m['直近'] / df_m['比較']
-st.table(df_m.iloc[3:])
+    st.write('売上/成約件数: 週単位')
+    graph.make_line([df_week2['売上/成約件数']],['売上/成約件数'], df_week2.index ) 
+
+    st.write('成約件数/組数: 週単位')
+    graph.make_line([df_week2['成約件数/組数']],['成約件数/組数'], df_week2.index )
+
+#*************************************************************年間平均
+
+sales_sum = df_all2['売上'].sum()
+kumi_sum = df_all2['組数'].sum()
+seiyaku_sum = df_all2['成約件数'].sum()
+
+#成約単価
+seiyaku_tanka = sales_sum / seiyaku_sum
+#成約率
+seiyaku_rate = seiyaku_sum / kumi_sum
+#'来店1組当たりの売上
+sales_per_kumi = sales_sum / kumi_sum
+#成約に必要な組数
+seiyaku_needed = 1 / (seiyaku_sum / kumi_sum)
+
+year_dict = {
+    '成約単価': seiyaku_tanka,
+    '成約率': seiyaku_rate,
+    '来店1組当たりの売上': sales_per_kumi,
+    '成約に必要な組数': seiyaku_needed
+}
+
+df_year = pd.DataFrame(year_dict, index=['年間平均']).T
+
+df_m = df_target.merge(df_year, left_index=True, right_index=True, how='outer')
+
+st.write(df_m)
+
+
+
+
 
 
 
