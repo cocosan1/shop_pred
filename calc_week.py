@@ -544,6 +544,7 @@ df_week2['売上/組数'] = df_week2['売上2'] / df_week2['組数2']
 df_week2['売上/成約件数'] = df_week2['売上2'] / df_week2['成約件数2']
 df_week2['成約件数/組数'] = df_week2['成約件数2'] / df_week2['組数2']
 
+st.subheader('主要指標算出')
 df_week3 = df_week2.sort_index(ascending=False)
 month_list = list(df_week3.index)
 target_week = st.selectbox('週を選択', month_list, key='tw')
@@ -613,6 +614,60 @@ df_year = pd.DataFrame(year_dict, index=['年間平均']).T
 df_m = df_target.merge(df_year, left_index=True, right_index=True, how='outer')
 
 st.write(df_m)
+
+#****************************************************************************logistic回帰
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+
+#売上1か月ずらし
+df_month = df_all2.resample('M').sum()
+df_month['組数-1'] = df_month['組数'].shift(freq='-1M')
+df_month = df_month.iloc[:-1]
+
+#データ分割
+X = df_month['組数-1'].values
+y = df_month['売上'].values
+
+#scikit-learnを使う際の学習データXはm×nの形にする必要がある
+X = X.reshape(-1, 1)
+
+#データ分割
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=0)
+
+#モデル生成
+model = LinearRegression()
+model.fit(X_test, y_test)
+
+#テスト
+result = model.predict(X_test)
+
+df_result = pd.DataFrame(list(zip(X_test, result)), columns=['組数', '予測売上'])
+df_result['組数'] = df_result['組数'].astype('int') #floatからintへ変換　mergeの準備
+
+df_merge = df_month.merge(df_result, left_on='組数-1', right_on='組数', how='right')
+df_merge = df_merge[['組数-1', '売上', '予測売上']]
+df_merge['差異'] = df_merge['予測売上'] - df_merge['売上']
+df_merge['比率'] = df_merge['予測売上'] / df_merge['売上']
+
+st.subheader('売上予測モデル性能テスト')
+st.write('テスト結果')
+st.write(df_merge)
+
+#予測
+st.subheader('売上の予測')
+kumi_num = st.number_input('組数を入力')
+kumi_num = int(kumi_num)
+
+if kumi_num != 0.00:
+    X_new = np.array(kumi_num).reshape(-1, 1)
+    result = model.predict(X_new)
+    result = int(result)
+
+    st.markdown('#### 予測売上')
+    st.subheader(f'{result}')
+
+
+
 
 
 
