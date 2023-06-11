@@ -310,15 +310,6 @@ df_std = stats.zscore(df_month)
 with st.expander('月/標準化済', expanded=False):
     st.write(df_std) #確認
 
-st.write('相互相関コレログラム 組数/成約件数')
-# 相互相関コレログラム（原系列）
-fig0, ax = plt.subplots()
-xcor_value1 = plt.xcorr(df_std['組数'], 
-                       df_std['成約件数'],
-                       detrend=mlab.detrend_none, 
-                       maxlags=6)
-st.pyplot(fig0)
-
 st.write('相互相関コレログラム 組数/売上')
 # 相互相関コレログラム（原系列）
 fig0, ax = plt.subplots()
@@ -382,9 +373,12 @@ with st.expander('月移動平均グラフ', expanded=False):
     st.write('成約件数/組数: 月単位')
     graph.make_line([df_month['成約件数/組数']],['成約件数/組数'], df_month.index )
 
-st.write('売上(-1か月ずらし)/組数: 月単位 2軸')
-#売上1か月ずらし
-df_month['売上3'] = df_month['売上2'].shift(freq='-1M')
+#売上が前月でグラフ計上されているためグラフ上はmax_lag-1で
+title = f'売上(-{max_lag-1}か月ずらし)/組数: 月単位 2軸'
+st.write(title)
+#売上max_lgか月ずらし
+freq = f'-{max_lag-1}M'
+df_month['売上3'] = df_month['売上2'].shift(freq=freq)
 graph.make_line_2shaft(df_month.index, df_month.index, df_month['組数2'], df_month['売上3'], '組数', '売上')
 
 
@@ -422,11 +416,11 @@ df_std = stats.zscore(df_day)
 with st.expander('日にち/標準化済', expanded=False):
     st.write(df_std) #確認
 
-st.write('相互相関コレログラム 組数/成約件数')
+st.write('相互相関コレログラム 組数/売上')
 # 相互相関コレログラム（原系列）
 fig0, ax = plt.subplots()
 xcor_value = plt.xcorr(df_std['組数'], 
-                       df_std['成約件数'],
+                       df_std['売上'],
                        detrend=mlab.detrend_none, 
                        maxlags=60)
 st.pyplot(fig0)
@@ -490,15 +484,6 @@ with st.expander('週/グラフ', expanded=False):
 df_stdw = stats.zscore(df_week)
 with st.expander('週単位/標準化済', expanded=False):
     st.write(df_stdw) #確認
-
-st.write('相互相関コレログラム 組数/成約件数')
-# 相互相関コレログラム（原系列）
-fig1, ax = plt.subplots()
-xcor_value = ax.xcorr(df_std['組数'], 
-                       df_std['成約件数'],
-                       detrend=mlab.detrend_none, 
-                       maxlags=12)
-st.pyplot(fig1)
 
 st.write('相互相関コレログラム 組数/売上')
 # 相互相関コレログラム（原系列）
